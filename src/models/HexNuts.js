@@ -47,6 +47,10 @@ const hexNutSchema = new mongoose.Schema({
   hardnessInHRC: {
     type: Number,
   },
+  category: {
+    type: String,
+    required: true,
+  },
 });
 const HexNut = mongoose.model("HexNut", hexNutSchema);
 

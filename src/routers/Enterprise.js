@@ -7,45 +7,65 @@ const router = new express.Router();
 //include the enterprise model
 const Enterprise = require("../models/Enterprise");
 
+//import auth middleware
+const auth = require("../middleware/authentication");
+
 //setting up a new enterprise
 router.post("/enterprise", async (req, res) => {
   const enterprise = new Enterprise(req.body);
   try {
+    const token = await enterprise.generateAuthToken();
     await enterprise.save();
-    res.status(201).send(enterprise);
+    res.status(201).send({ enterprise, token });
   } catch (e) {
     res.status(400).send();
   }
 });
 
 //fetch an enterprise by id
-router.get("/enterprise/:id", async (req, res) => {
+router.get("/enterprise/login", async (req, res) => {
   const _id = req.params.id;
-  console.log(req.body);
+  //console.log(req.body);
   try {
     const enterprise = await Enterprise.findByCredentials(
       req.body.email,
       req.body.password
     );
-    console.log(enterprise);
-    res.send(enterprise);
+    const token = await enterprise.generateAuthToken();
+    res.send({ enterprise, token });
   } catch (e) {
     res.status(404).send();
   }
 });
-//fetch all enterprises
-router.get("/enterprise", async (req, res) => {
+//logout enterpise
+router.post("/enterprise/logout", auth, async (req, res) => {
   try {
-    const enterprise = await Enterprise.find();
-    res.send(enterprise);
+    req.enterprise.tokens = req.enterprise.tokens.filter((token) => {
+      token !== req.token;
+    });
+    await req.enterprise.save();
+    res.send();
   } catch (e) {
-    res.status(404).send();
+    res.status(500).send();
   }
+});
+//log out all enterprises
+router.post("/enterprise/logoutAll", auth, async (req, res) => {
+  try {
+    req.enterprise.tokens = [];
+    await req.enterprise.save();
+    res.send();
+  } catch (e) {
+    res.status(500).send();
+  }
+});
+//log in enterprises
+router.get("/enterprise/me", auth, async (req, res) => {
+  res.send(req.enterprise);
 });
 
 //update enterprise using id
-router.patch("/enterprise/:id", async (req, res) => {
-  const _id = req.params.id;
+router.patch("/enterprise/me", auth, async (req, res) => {
   const allowedUpdates = ["name", "location"];
   const queryUpdates = Object.keys(req.body);
   const isValidUpdate = queryUpdates.every((update) =>
@@ -55,7 +75,7 @@ router.patch("/enterprise/:id", async (req, res) => {
     return res.status(404).send("Invalid Update");
   }
   try {
-    const enterprise = await Enterprise.findById(_id);
+    const enterprise = req.enterprise;
     if (!enterprise) {
       res.status(404).send("Invalid Enterprise");
     }
@@ -68,11 +88,11 @@ router.patch("/enterprise/:id", async (req, res) => {
 });
 
 //delete enterprise by id
-router.delete("/enterprise/:id", async (req, res) => {
-  const _id = req.params.id;
+router.delete("/enterprise/me", auth, async (req, res) => {
   try {
-    const enterprise = await Enterprise.findByIdAndDelete(_id);
-    res.send(enterprise);
+    //remove enterprise from mongoose document
+    await req.enterprise.remove();
+    res.send(req.enterprise);
   } catch (e) {
     res.status(404).send();
   }
