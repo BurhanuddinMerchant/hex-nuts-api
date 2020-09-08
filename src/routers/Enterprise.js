@@ -37,6 +37,7 @@ router.get("/enterprise/login", async (req, res) => {
     res.status(404).send();
   }
 });
+
 //logout enterpise
 router.post("/enterprise/logout", auth, async (req, res) => {
   try {

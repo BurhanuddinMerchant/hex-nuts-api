@@ -2,51 +2,57 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
 const jwt = require("jsonwebtoken");
+const HexNut = require("./HexNuts");
 mongoose.connect("mongodb://127.0.0.1:27017/hex-nut-api", {
   useNewUrlParser: true,
   useCreateIndex: true,
   useUnifiedTopology: true,
 });
 
-const EnterpriseSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-  },
-  location: {
-    type: String,
-    default: "N/A",
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    validate(value) {
-      if (!validator.isEmail(value)) {
-        throw new Error("Invalid Email");
-      }
+const EnterpriseSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
     },
-  },
-  password: {
-    type: String,
-    required: true,
-    trim: true,
-    validate(value) {
-      if (value.length <= 5) {
-        throw new Error("Password should be atleast 6 characters");
-      }
+    location: {
+      type: String,
+      default: "N/A",
     },
-  },
-  tokens: [
-    {
-      token: {
-        type: String,
-        required: true,
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error("Invalid Email");
+        }
       },
     },
-  ],
-});
+    password: {
+      type: String,
+      required: true,
+      trim: true,
+      validate(value) {
+        if (value.length <= 5) {
+          throw new Error("Password should be atleast 6 characters");
+        }
+      },
+    },
+    tokens: [
+      {
+        token: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
 
 EnterpriseSchema.pre("save", async function (next) {
   const enterprise = this;
@@ -62,6 +68,13 @@ EnterpriseSchema.methods.toJSON = function () {
   delete enterpriseObject.tokens;
   return enterpriseObject;
 };
+
+//set up a virtual property
+EnterpriseSchema.virtual("hexnuts", {
+  ref: "HexNut",
+  localField: "_id",
+  foreignField: "owner",
+});
 
 EnterpriseSchema.methods.generateAuthToken = async function () {
   const enterprise = this;
@@ -87,5 +100,12 @@ EnterpriseSchema.statics.findByCredentials = async (email, password) => {
   }
   return enterprise;
 };
+
+//delete user tasks when enterprise is removed
+EnterpriseSchema.pre("remove", async function (next) {
+  const enterprise = this;
+  await HexNut.deleteMany({ owner: enterprise._id });
+  next();
+});
 const Enterprise = mongoose.model("Enterprise", EnterpriseSchema);
 module.exports = Enterprise;
