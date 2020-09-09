@@ -14,6 +14,36 @@ const auth = require("../middleware/authentication");
 //add the multer library for file upload
 const multer = require("multer");
 
+//import the sharp module for converting the file type one uniform type i.e. png
+//const sharp = require("sharp");
+
+// //sending hexnut image
+// router.post(
+//   "/hexnut/image/:id",
+//   auth,
+//   //middleware to upload image
+//   upload.single("image"),
+//   async (req, res) => {
+//     _id = req.params.id;
+//     owner = req.enterprise._id;
+//     try {
+//       const hexnut = await HexNut.findOne({ _id, owner });
+//       if (!hexnut) {
+//         return res.status(404).send();
+//       }
+//       hexnut.image = req.file.buffer;
+//       await hexnut.save();
+//     } catch (e) {
+//       res.status(404).send();
+//     }
+//     res.send();
+//   },
+//   //handling any errors
+//   (e, req, res, next) => {
+//     res.status(400).send({ error: e.message });
+//   }
+// );
+
 //setting up rules to upload an image using multer
 const upload = multer({
   limits: {
@@ -26,41 +56,22 @@ const upload = multer({
     cb(undefined, true);
   },
 });
-//sending hexnut image
-router.post(
-  "/hexnut/image/:id",
-  auth,
-  //middleware to upload image
-  upload.single("image"),
-  async (req, res) => {
-    _id = req.params.id;
-    owner = req.enterprise._id;
-    try {
-      const hexnut = await HexNut.findOne({ _id, owner });
-      if (!hexnut) {
-        return res.status(404).send();
-      }
-      hexnut.image = req.file.buffer;
-      await hexnut.save();
-    } catch (e) {
-      res.status(404).send();
-    }
-    res.send();
-  },
-  //handling any errors
-  (e, req, res, next) => {
-    res.status(400).send({ error: e.message });
-  }
-);
-//setting up the post request
+
+//a new request for creating a hexnut
+//this handles both file and text data in one request
 router.post(
   "/hexnut",
-  //middleware to authenticate
+  //setting up authentication
   auth,
+  //setting up the multer middleware
+  upload.fields([{ name: "image" }, { name: "product_data" }]),
   async (req, res) => {
+    const image_buffer = req.files.image[0].buffer;
     const hexnut = new HexNut({
-      ...req.body,
+      //convert the text data into json data and spreading it
+      ...JSON.parse(req.body.product_data),
       owner: req.enterprise._id,
+      image: image_buffer,
     });
     try {
       await hexnut.save();
@@ -68,8 +79,31 @@ router.post(
     } catch (e) {
       res.status(400).send();
     }
+  },
+  //handling any errors
+  (e, req, res, next) => {
+    res.status(400).send({ error: e.message });
   }
 );
+
+// //setting up the post request
+// router.post(
+//   "/hexnut",
+//   //middleware to authenticate
+//   auth,
+//   async (req, res) => {
+//     const hexnut = new HexNut({
+//       ...req.body,
+//       owner: req.enterprise._id,
+//     });
+//     try {
+//       await hexnut.save();
+//       res.status(201).send(hexnut);
+//     } catch (e) {
+//       res.status(400).send();
+//     }
+//   }
+// );
 
 //setting up the retreival endpoint
 router.get("/hexnut/:id", auth, async (req, res) => {
@@ -130,6 +164,20 @@ router.get("/hexnuts/:industry", auth, async (req, res) => {
   }
 });
 
+//route for the client to get picture of the hexnut
+router.get("/hexnuts/:id/image", async (req, res) => {
+  try {
+    const hexnut = await HexNut.findById(req.params.id);
+    if (!hexnut || !hexnut.image) {
+      throw new Error("No image found");
+    }
+    res.set("Content-Type", "image/jpg");
+    res.send(hexnut.image);
+  } catch (e) {
+    res.status(400).send();
+  }
+});
+
 //update endpoint
 router.patch("/hexnut/:id", auth, async (req, res) => {
   const updateableFields = [
@@ -161,16 +209,16 @@ router.patch("/hexnut/:id", auth, async (req, res) => {
   }
 });
 
-//delete endpoint
-//deletes all products
-router.delete("/hexnuts", async (req, res) => {
-  try {
-    const hexnuts = await HexNut.deleteMany({});
-    res.send(hexnuts);
-  } catch (e) {
-    res.status(400).send();
-  }
-});
+// //delete endpoint
+// //deletes all products
+// router.delete("/hexnuts", async (req, res) => {
+//   try {
+//     const hexnuts = await HexNut.deleteMany({});
+//     res.send(hexnuts);
+//   } catch (e) {
+//     res.status(400).send();
+//   }
+// });
 
 //delete endpoint
 //delete one product
