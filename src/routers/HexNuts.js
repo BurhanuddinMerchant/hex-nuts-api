@@ -14,36 +14,6 @@ const auth = require("../middleware/authentication");
 //add the multer library for file upload
 const multer = require("multer");
 
-//import the sharp module for converting the file type one uniform type i.e. png
-//const sharp = require("sharp");
-
-// //sending hexnut image
-// router.post(
-//   "/hexnut/image/:id",
-//   auth,
-//   //middleware to upload image
-//   upload.single("image"),
-//   async (req, res) => {
-//     _id = req.params.id;
-//     owner = req.enterprise._id;
-//     try {
-//       const hexnut = await HexNut.findOne({ _id, owner });
-//       if (!hexnut) {
-//         return res.status(404).send();
-//       }
-//       hexnut.image = req.file.buffer;
-//       await hexnut.save();
-//     } catch (e) {
-//       res.status(404).send();
-//     }
-//     res.send();
-//   },
-//   //handling any errors
-//   (e, req, res, next) => {
-//     res.status(400).send({ error: e.message });
-//   }
-// );
-
 //setting up rules to upload an image using multer
 const upload = multer({
   limits: {
@@ -85,25 +55,6 @@ router.post(
     res.status(400).send({ error: e.message });
   }
 );
-
-// //setting up the post request
-// router.post(
-//   "/hexnut",
-//   //middleware to authenticate
-//   auth,
-//   async (req, res) => {
-//     const hexnut = new HexNut({
-//       ...req.body,
-//       owner: req.enterprise._id,
-//     });
-//     try {
-//       await hexnut.save();
-//       res.status(201).send(hexnut);
-//     } catch (e) {
-//       res.status(400).send();
-//     }
-//   }
-// );
 
 //setting up the retreival endpoint
 router.get("/hexnut/:id", auth, async (req, res) => {
@@ -151,13 +102,31 @@ router.get("/hexnuts", auth, async (req, res) => {
 });
 
 //get all the hexnuts of a particular industry by name
-router.get("/hexnuts/:industry", auth, async (req, res) => {
+router.get("/hexnuts/:industry", async (req, res) => {
+  const match = {};
+  const sort = {};
+  if (req.query.category) {
+    match.category = req.query.category;
+  }
+  if (req.query.sortBy) {
+    const parts = req.query.sortBy.split(":");
+    sort[parts[0]] = parts[1] === "desc" ? -1 : 1;
+  }
   name = req.params.industry;
   //console.log(req.body);
   try {
     const enterprise = await Enterprise.findOne({ name: name });
-    console.log(enterprise);
-    await enterprise.populate("hexnuts").execPopulate();
+    await enterprise
+      .populate({
+        path: "hexnuts",
+        match,
+        options: {
+          limit: parseInt(req.query.limit),
+          skip: parseInt(req.query.skip),
+          sort,
+        },
+      })
+      .execPopulate();
     res.send(enterprise.hexnuts);
   } catch (e) {
     res.status(404).send();
@@ -171,7 +140,7 @@ router.get("/hexnuts/:id/image", async (req, res) => {
     if (!hexnut || !hexnut.image) {
       throw new Error("No image found");
     }
-    res.set("Content-Type", "image/jpg");
+    res.set("Content-Type", "image/png");
     res.send(hexnut.image);
   } catch (e) {
     res.status(400).send();
@@ -209,17 +178,6 @@ router.patch("/hexnut/:id", auth, async (req, res) => {
   }
 });
 
-// //delete endpoint
-// //deletes all products
-// router.delete("/hexnuts", async (req, res) => {
-//   try {
-//     const hexnuts = await HexNut.deleteMany({});
-//     res.send(hexnuts);
-//   } catch (e) {
-//     res.status(400).send();
-//   }
-// });
-
 //delete endpoint
 //delete one product
 router.delete("/hexnut/:id", auth, async (req, res) => {
@@ -238,16 +196,4 @@ router.delete("/hexnut/:id", auth, async (req, res) => {
   }
 });
 
-//route to delete hexnut image
-router.delete("/hexnut/image/:id", auth, async (req, res) => {
-  const _id = req.params.id;
-  try {
-    const hexnut = await HexNut.findOne({ _id, owner: req.enterprise._id });
-    hexnut.image = undefined;
-    await hexnut.save();
-    res.send();
-  } catch (e) {
-    res.status(400).send();
-  }
-});
 module.exports = router;

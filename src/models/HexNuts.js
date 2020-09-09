@@ -6,7 +6,7 @@ const validator = require("validator");
 const Enterprise = require("./Enterprise");
 
 //connecting mongoose to the database/creating db
-mongoose.connect("mongodb://127.0.0.1:27017/hex-nut-api", {
+mongoose.connect(process.env.MONGODB_URL, {
   useNewUrlParser: true,
   useCreateIndex: true,
   useUnifiedTopology: true,

@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const HexNut = require("./HexNuts");
-mongoose.connect("mongodb://127.0.0.1:27017/hex-nut-api", {
+mongoose.connect(process.env.MONGODB_URL, {
   useNewUrlParser: true,
   useCreateIndex: true,
   useUnifiedTopology: true,
@@ -81,7 +81,7 @@ EnterpriseSchema.methods.generateAuthToken = async function () {
 
   const token = jwt.sign(
     { _id: enterprise._id.toString() },
-    "thisismyproductbase"
+    process.env.JWT_SECRET
   );
   enterprise.tokens = enterprise.tokens.concat({ token });
   await enterprise.save();

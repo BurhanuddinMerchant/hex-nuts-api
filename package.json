@@ -14,12 +14,13 @@
     "validator": "^13.1.1"
   },
   "devDependencies": {
+    "env-cmd": "^10.1.0",
     "nodemon": "^2.0.4"
   },
   "scripts": {
     "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/index.js -e js,json,html"
+    "dev": "env-cmd -f ./config/dev.env nodemon src/index.js -e js,json,html"
   },
   "keywords": [],
   "author": "",

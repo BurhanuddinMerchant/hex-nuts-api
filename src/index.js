@@ -5,7 +5,7 @@ const express = require("express");
 const app = new express();
 
 //set up the port
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 //used to pares the json object in req.body
 app.use(express.json());
