@@ -7,6 +7,12 @@ const app = new express();
 //set up the port
 const port = process.env.PORT;
 
+//seting up cors for enabling permissins
+const cors = require("cors");
+
+//using cors
+app.use(cors());
+
 //used to pares the json object in req.body
 app.use(express.json());
 
